@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FilterTube Ultimate — Precision Search</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5f88ff; 
+    --bg0: #07102a; 
+    --bg1: #071018; 
+    --card-bg: rgba(15, 23, 42, 0.6);
+    --text: #e8f0ff; 
+    --muted: #9fb2ff;
+    --border: rgba(255,255,255,0.1);
+    --scrollbar-track: #040812;
+    --scrollbar-thumb: var(--accent);
+    --shadow: 0 18px 50px rgba(6,12,40,0.6);
+  }
+
+  [data-theme="light"] {
+    --bg0: #f0f4f8; --bg1: #ffffff; --card-bg: #ffffff;
+    --text: #1a202c; --muted: #4a5568; --border: #cbd5e0;
+    --scrollbar-track: #e2e8f0; --shadow: 0 10px 30px rgba(0,0,0,0.1);
+  }
+
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+
+  html, body { height: 100%; margin: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--bg0); color: var(--text); transition: background 0.3s, color 0.3s; }
+  
+  body::before {
+    content:""; position:fixed; inset:0; z-index:0;
+    background: radial-gradient(circle at 10% 20%, rgba(95,136,255,0.1), transparent 25%), 
+                radial-gradient(circle at 90% 80%, rgba(60,130,220,0.08), transparent 25%), 
+                linear-gradient(180deg, var(--bg0), var(--bg1));
+    pointer-events: none; transition: background 0.5s ease;
+  }
+  body.custom-bg::before {
+    background-image: var(--custom-bg-url); background-size: cover; background-position: center; opacity: 0.4;
+  }
+
+  #app { position: relative; z-index: 2; padding: 20px; display: flex; justify-content: center; min-height: 100vh; }
+  .shell { width: 100%; max-width: 1500px; display: grid; grid-template-columns: 320px 1fr 320px; gap: 20px; align-items: start; }
+
+  aside, main.content {
+    padding: 18px; border-radius: 12px; background: var(--card-bg);
+    border: 1px solid var(--border); backdrop-filter: blur(12px); box-shadow: var(--shadow);
+    display: flex; flex-direction: column;
+  }
+  aside { position: sticky; top: 20px; height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden; }
+  main.content { min-height: calc(100vh - 40px); }
+
+  /* Inputs & Buttons */
+  .logo { width: 40px; height: 40px; border-radius: 8px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.2rem; }
+  label { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; letter-spacing: 0.05em; }
+  input[type=text], select, input[type=password] {
+    width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: rgba(127, 127, 127, 0.1); color: var(--text); font-family: inherit; transition: all 0.2s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(95,136,255,0.2); }
+  
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: rgba(127, 127, 127, 0.1); color: var(--text); font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.2s; text-decoration: none;
+  }
+  .btn:hover { background: rgba(127, 127, 127, 0.2); transform: translateY(-1px); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.danger { color: #ff6b6b; border-color: rgba(255,107,107,0.3); }
+  .btn.small { padding: 5px 10px; font-size: 0.8rem; }
+  .row { display: flex; gap: 8px; align-items: center; }
+
+  /* Input Group (Password Eye) */
+  .input-group { position: relative; display: flex; align-items: center; }
+  .input-group input { padding-right: 35px; }
+  .input-toggle { position: absolute; right: 8px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; }
+
+  /* Results Grid */
+  #results { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  #results.list-view { display: flex; flex-direction: column; }
+  
+  /* Video Card */
+  .video-card {
+    background: rgba(127, 127, 127, 0.05); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    transition: transform 0.2s; position: relative; display: flex; flex-direction: column;
+  }
+  .video-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+  
+  /* Select Bar */
+  .select-bar {
+    background: rgba(0,0,0,0.4); border-bottom: 1px solid var(--border); padding: 8px;
+    display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.2s;
+  }
+  .select-bar:hover { background: rgba(255,255,255,0.1); }
+  .big-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+
+  .thumb { position: relative; padding-bottom: 56.25%; background: #000; overflow: hidden; cursor: pointer; }
+  .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+  .thumb:hover img { transform: scale(1.05); }
+  
+  .duration { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+  
+  /* Zoom Icon */
+  .zoom-icon {
+    position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; background: rgba(0,0,0,0.7); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center; color: #fff; opacity: 0; transition: opacity 0.2s; font-size: 1rem;
+  }
+  .thumb:hover .zoom-icon { opacity: 1; }
+  .zoom-icon:hover { background: var(--accent); }
+
+  .card-body { padding: 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .video-title { font-weight: 700; font-size: 0.95rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+
+  /* List View Overrides */
+  #results.list-view .video-card { flex-direction: row; height: 110px; }
+  #results.list-view .select-bar { width: 40px; flex-direction: column; justify-content: center; border-bottom: 0; border-right: 1px solid var(--border); }
+  #results.list-view .thumb { width: 160px; height: 100%; padding-bottom: 0; }
+
+  /* Modals */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(4px); z-index: 9999; display: none; align-items: center; justify-content: center; }
+  .modal { background: var(--bg0); border: 1px solid var(--border); width: 90%; max-width: 800px; padding: 24px; border-radius: 16px; max-height: 90vh; overflow: auto; color: var(--text); }
+  .close-x { float: right; cursor: pointer; font-size: 1.5rem; background: none; border: none; color: var(--muted); }
+  
+  .kofi-btn { background: #FF5E5B; color: white !important; font-weight: bold; width: 100%; margin-top: auto; border: 0; }
+  .kofi-btn:hover { background: #ff7673; }
+  .hidden { display: none !important; }
+
+  /* Saved Item */
+  .saved-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; }
+  .saved-item span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 160px; }
+
+  @media (max-width: 1000px) { .shell { grid-template-columns: 1fr; } aside { position: static; height: auto; max-height: 500px; } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="shell">
+    
+    <aside>
+      <div class="row" style="margin-bottom:12px">
+        <div class="logo">FT</div>
+        <div><div style="font-weight:900; line-height:1">FilterTube</div><div style="font-size:0.75rem; color:var(--muted)">Ultimate v2</div></div>
+        <button id="helpBtn" class="btn small" style="margin-left:auto" title="Tutorial">?</button>
+      </div>
+
+      <div class="row">
+         <button id="themeToggle" class="btn small" style="flex:1">☀/☾ Mode</button>
+         <input type="color" id="accentColor" value="#5f88ff" style="width:40px; padding:2px; height:34px">
+      </div>
+
+      <label>API Key</label>
+      <div class="input-group">
+        <input id="apiKey" type="password" placeholder="Paste YouTube API Key...">
+        <button class="input-toggle" id="toggleKeyBtn" title="Show/Hide Key">👁</button>
+      </div>
+
+      <label>Search Query</label>
+      <input id="searchInput" type="text" placeholder="Type & Enter..." autocomplete="off">
+      
+      <div class="row" style="margin-top:10px">
+        <div style="flex:1">
+            <label style="margin:0 0 4px">Logic</label>
+            <select id="boolSel"><option value="and">AND (Strict)</option><option value="or">OR</option><option value="exact">Exact</option></select>
+        </div>
+        <div style="width: 80px">
+            <label style="margin:0 0 4px">Count</label>
+            <select id="countSel"><option value="4">4</option><option value="8">8</option><option value="12" selected>12</option><option value="20">20</option></select>
+        </div>
+      </div>
+
+      <label>Filters</label>
+      <div class="row">
+        <select id="sortSel"><option value="relevance">Relevance</option><option value="date">Date</option><option value="viewCount">Views</option></select>
+        <select id="durationSel"><option value="any">Any Time</option><option value="short">Short (&lt;4)</option><option value="medium">Med (4-20)</option><option value="long">Long (&gt;20)</option></select>
+      </div>
+      
+      <label>Exclude</label>
+      <input id="excludeInput" type="text" placeholder="shorts, reaction...">
+
+      <button id="searchBtn" class="btn primary" style="width:100%; margin-top:16px">Search</button>
+
+      <div style="margin: 20px 0; border-top: 1px solid var(--border)"></div>
+      
+      <div class="row">
+        <button id="bgLinkBtn" class="btn small" style="flex:1">BG Link</button>
+        <button id="bgFileBtn" class="btn small" style="flex:1">BG Upload</button>
+        <input type="file" id="bgFileInput" hidden accept="image/*">
+      </div>
+      
+      <div style="margin-top: auto;"></div>
+      <a href="https://ko-fi.com/yumadesu" target="_blank" class="btn kofi-btn">🍅 Buy me a Tomato</a>
+    </aside>
+
+    <main class="content">
+      <div class="row" style="margin-bottom:16px">
+        <h2 style="font-weight:900">Results</h2>
+        <div id="status" style="color:var(--muted); font-size:0.9rem; margin-left:12px">Ready</div>
+        <div style="margin-left:auto" class="row">
+            <button id="savePageBtn" class="btn small hidden" title="Save these results locally">Save Page</button>
+            <button id="copyLinksBtn" class="btn small" title="Copy all links">Copy Links</button>
+            <button id="viewToggle" class="btn small" title="Toggle Grid/List">≣</button>
+        </div>
+      </div>
+
+      <div id="batchPanel" class="row hidden" style="background:var(--accent); color:#fff; padding:8px 12px; border-radius:8px; margin-bottom:12px">
+        <span id="batchCount" style="font-weight:bold">0 selected</span>
+        <div style="margin-left:auto" class="row">
+            <input type="text" id="newPlName" placeholder="Playlist Name" style="width:150px; height:30px; border:none; background:rgba(255,255,255,0.2); color:#fff">
+            <button id="createBatchPl" class="btn small" style="background:#fff; color:var(--accent); border:none">Create Playlist</button>
+            <button id="clearBatch" class="btn small" style="background:rgba(0,0,0,0.2); border:none; color:#fff">Cancel</button>
+        </div>
+      </div>
+
+      <div id="results"></div>
+
+      <div class="row" style="margin-top:auto; padding-top:20px; justify-content:center">
+        <button id="prevBtn" class="btn tooltip" data-tip="Go back">← Prev</button>
+        <span id="pageIndicator" style="font-weight:bold; padding:0 12px; color:var(--muted)">Page 1</span>
+        <button id="nextBtn" class="btn tooltip" data-tip="Load more">Next →</button>
+      </div>
+    </main>
+
+    <aside>
+      <div class="row">
+        <h3 style="font-weight:900">Queue</h3>
+        <button id="clearQueue" class="btn small danger" style="margin-left:auto">Clear</button>
+      </div>
+
+      <div id="queueList" style="flex:1; overflow:auto; margin:12px 0; display:flex; flex-direction:column; gap:8px; max-height:300px"></div>
+      
+      <div style="font-size:0.8rem; color:var(--muted); text-align:center; margin-bottom:8px" id="queueStats">0 videos • 0:00</div>
+      <button id="playQueue" class="btn primary" style="width:100%">Play on YouTube</button>
+
+      <div style="margin: 20px 0; border-top: 1px solid var(--border)"></div>
+
+      <label>Saved Pages (Offline)</label>
+      <div id="savedList" style="max-height:200px; overflow:auto; margin-bottom:12px"></div>
+
+      <div style="margin: 20px 0; border-top: 1px solid var(--border)"></div>
+      
+      <label>Google Sign-In</label>
+      <div class="row">
+        <input id="clientId" type="password" placeholder="Client ID (Optional)">
+        <button id="authBtn" class="btn small">Sign In</button>
+      </div>
+      
+      <label style="margin-top:16px">Data</label>
+      <div class="row">
+        <button id="exportData" class="btn small" style="flex:1">Export</button>
+        <button id="importData" class="btn small" style="flex:1">Import</button>
+        <input type="file" id="importInput" hidden accept=".json">
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div id="helpModal" class="modal-backdrop">
+  <div class="modal">
+    <button class="close-x" onclick="document.getElementById('helpModal').style.display='none'">×</button>
+    <h2>FilterTube Guide</h2>
+    <div style="line-height:1.6; margin-top:16px">
+      <p><b>1. API Key:</b> You need a YouTube Data API v3 key. <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent)">Get it here</a>.</p>
+      <p><b>2. Selection:</b> Click the bar at the top of a video card to select it for Batch Actions.</p>
+      <p><b>3. AND Logic:</b> This wraps every word in quotes (e.g. "Joji" "Reaction"). YouTube will try to find videos containing ALL these words in title/description.</p>
+      <p><b>4. Zoom:</b> Hover over a thumbnail and click the magnifying glass to see a large preview.</p>
+      <p><b>5. Save Page:</b> Saves the current results to your browser so you can view them later without using API quota.</p>
+    </div>
+  </div>
+</div>
+
+<div id="zoomModal" class="modal-backdrop" onclick="this.style.display='none'">
+  <img id="zoomedImg" src="" style="max-height:90vh; max-width:90vw; border-radius:12px; box-shadow:0 0 50px rgba(0,0,0,0.8); object-fit:contain">
+</div>
+
+<div id="playerModal" class="modal-backdrop">
+  <div class="modal" style="padding:0; overflow:hidden; background:black">
+    <div style="padding:10px; background:var(--bg0); display:flex; justify-content:space-between">
+      <span id="playerTitle" style="font-weight:bold; color:var(--text)"></span>
+      <button class="close-x" onclick="closePlayer()">×</button>
+    </div>
+    <div style="position:relative; padding-bottom:56.25%; height:0">
+      <iframe id="iframePlayer" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0" allowfullscreen></iframe>
+    </div>
+    <div style="padding:12px; background:var(--bg0); color:var(--text)">
+      <div style="font-size:0.8rem; color:var(--muted)">If unavailable (Error 150/153), owner blocked playback. <a href="#" id="playerLink" target="_blank" style="color:var(--accent)">Watch on YouTube</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================
+   CORE LOGIC & CONFIG
+   ========================================= */
+const EL = id => document.getElementById(id);
+const isoToSec = d => { if (!d) return 0; const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/); if (!m) return 0; return (parseInt(m[1]||0)*3600)+(parseInt(m[2]||0)*60)+(parseInt(m[3]||0)); };
+const niceDur = sec => { if(!sec) return '0:00'; const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60; return (h>0?h+':':'') + `${m}:${String(s).padStart(2,'0')}`; };
+
+const STATE = {
+    query: '',
+    pageToken: null,
+    prevTokens: [],
+    token: null, // OAuth
+    currentResults: [] // Store current video objects
+};
+
+// --- Initialization ---
+const savedKey = localStorage.getItem('ft_api_key');
+if (savedKey) EL('apiKey').value = savedKey;
+const savedClient = localStorage.getItem('ft_client_id');
+if (savedClient) EL('clientId').value = savedClient;
+
+function applyTheme(isLight) {
+    document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+    EL('themeToggle').textContent = isLight ? '☾ Dark Mode' : '☀ Bright Mode';
+    localStorage.setItem('ft_theme', isLight ? 'light' : 'dark');
+}
+EL('themeToggle').onclick = () => applyTheme(document.documentElement.getAttribute('data-theme') !== 'light');
+if (localStorage.getItem('ft_theme') === 'light') applyTheme(true);
+
+EL('accentColor').addEventListener('input', (e) => {
+    document.documentElement.style.setProperty('--accent', e.target.value);
+    localStorage.setItem('ft_accent', e.target.value);
+});
+if (localStorage.getItem('ft_accent')) {
+    document.documentElement.style.setProperty('--accent', localStorage.getItem('ft_accent'));
+    EL('accentColor').value = localStorage.getItem('ft_accent');
+}
+
+// Key Toggle
+EL('toggleKeyBtn').onclick = () => {
+    const inp = EL('apiKey');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// Backgrounds
+EL('bgLinkBtn').onclick = () => { const url = prompt("Paste Image URL:"); if(url) setBg(url); }
+EL('bgFileBtn').onclick = () => EL('bgFileInput').click();
+EL('bgFileInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if(file) { const r = new FileReader(); r.onload = (ev) => setBg(ev.target.result); r.readAsDataURL(file); }
+}
+function setBg(url) {
+    document.documentElement.style.setProperty('--custom-bg-url', `url("${url}")`);
+    document.body.classList.add('custom-bg');
+    localStorage.setItem('ft_bg', url);
+}
+if(localStorage.getItem('ft_bg')) setBg(localStorage.getItem('ft_bg'));
+
+// --- Search Logic ---
+EL('searchBtn').onclick = () => performSearch();
+EL('searchInput').onkeyup = (e) => { if(e.key === 'Enter') performSearch(); };
+EL('nextBtn').onclick = () => performSearch(STATE.pageToken);
+EL('prevBtn').onclick = () => {
+    if(STATE.prevTokens.length > 1) { STATE.prevTokens.pop(); const prev = STATE.prevTokens.pop(); performSearch(prev, true); } 
+    else { STATE.prevTokens = []; performSearch(null, true); }
+}
+
+async function performSearch(token = null, isBack = false) {
+    const key = EL('apiKey').value.trim();
+    if(!key) return alert("API Key Missing!");
+    localStorage.setItem('ft_api_key', key);
+    
+    let q = EL('searchInput').value.trim();
+    if(!q) return;
+
+    EL('status').textContent = "Searching...";
+    EL('savePageBtn').classList.add('hidden'); // Hide until loaded
+    
+    // STRICT LOGIC
+    let finalQ = q;
+    const logic = EL('boolSel').value;
+    if(logic === 'exact') finalQ = `"${q}"`;
+    if(logic === 'and') finalQ = q.split(' ').map(w => `"${w}"`).join(' '); // Quote every word for strict AND
+    if(logic === 'or') finalQ = q.split(' ').join(' OR ');
+    if(EL('excludeInput').value) finalQ += ' -' + EL('excludeInput').value.split(',').join(' -');
+
+    const requestedCount = parseInt(EL('countSel').value);
+
+    // API Params
+    const params = new URLSearchParams({
+        part: 'snippet',
+        maxResults: requestedCount, // REQUEST EXACT COUNT
+        q: finalQ,
+        type: 'video',
+        order: EL('sortSel').value,
+        key: key
+    });
+    
+    const dur = EL('durationSel').value;
+    if(dur !== 'any') params.append('videoDuration', dur);
+    if(token) params.append('pageToken', token);
+
+    try {
+        // 1. Search Query
+        const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+        const data = await res.json();
+        if(data.error) throw new Error(data.error.message);
+
+        // Pagination
+        STATE.pageToken = data.nextPageToken;
+        if(!isBack && !token) STATE.prevTokens = [];
+        if(!isBack && token) STATE.prevTokens.push(token);
+
+        // 2. Fetch Views & Duration (Secondary API Call)
+        const videoIds = data.items.map(i => i.id.videoId).join(',');
+        let enrichedItems = [];
+        
+        if (videoIds) {
+            const statsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${videoIds}&key=${key}`);
+            const statsData = await statsRes.json();
+            const statsMap = {};
+            (statsData.items || []).forEach(it => statsMap[it.id] = it);
+            
+            // Merge
+            enrichedItems = data.items.map(item => {
+                const det = statsMap[item.id.videoId];
+                return {
+                    id: item.id.videoId,
+                    title: item.snippet.title,
+                    channel: item.snippet.channelTitle,
+                    thumb: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+                    date: item.snippet.publishedAt,
+                    views: det ? parseInt(det.statistics.viewCount) : 0,
+                    duration: det ? isoToSec(det.contentDetails.duration) : 0
+                };
+            });
+        }
+
+        STATE.currentResults = enrichedItems.slice(0, requestedCount); // Strict Slice
+        renderResults(STATE.currentResults);
+        
+        const total = parseInt(data.pageInfo?.totalResults || 0);
+        EL('status').textContent = `Found ~${total.toLocaleString()}`;
+        EL('pageIndicator').textContent = token ? "Page..." : "Page 1";
+        EL('savePageBtn').classList.remove('hidden');
+
+    } catch(e) {
+        alert("Error: " + e.message);
+        EL('status').textContent = "Error";
+    }
+}
+
+function renderResults(items) {
+    const div = EL('results');
+    div.innerHTML = '';
+    STATE.batchIds = new Set(); 
+    updateBatchUI();
+
+    items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.innerHTML = `
+            <div class="select-bar" onclick="toggleBatch('${item.id}')" title="Click to select">
+                <input type="checkbox" class="big-check" id="chk-${item.id}">
+                <span style="font-size:0.8rem; font-weight:bold; color:#fff">SELECT</span>
+            </div>
+            <div class="thumb">
+                <img src="${item.thumb}">
+                <div class="zoom-icon" onclick="zoomImg('${item.thumb}')" title="Zoom">🔍</div>
+                <div class="duration">${niceDur(item.duration)}</div>
+            </div>
+            <div class="card-body">
+                <div class="video-title" title="${escape(item.title)}">${item.title}</div>
+                <div class="meta">
+                    <span>${item.channel}</span>
+                    <span>${item.views.toLocaleString()} views • ${item.date.substr(0,10)}</span>
+                </div>
+                <div class="row" style="margin-top:auto">
+                    <button class="btn small primary" onclick="addToQueue('${item.id}', '${escape(item.title.replace(/'/g, ""))}')">Queue</button>
+                    <button class="btn small" onclick="playVideo('${item.id}', '${escape(item.title.replace(/'/g, ""))}')">Play</button>
+                    <button class="btn small" onclick="window.open('https://youtu.be/${item.id}')">Link</button>
+                </div>
+            </div>
+        `;
+        div.appendChild(card);
+    });
+}
+
+function escape(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+window.zoomImg = (src) => { EL('zoomedImg').src = src.replace('mqdefault', 'maxresdefault').replace('hqdefault','maxresdefault'); EL('zoomModal').style.display = 'flex'; }
+
+/* =========================================
+   BATCH PLAYLIST & QUEUE
+   ========================================= */
+STATE.batchIds = new Set();
+window.toggleBatch = (id) => {
+    const chk = EL(`chk-${id}`);
+    if(STATE.batchIds.has(id)) { STATE.batchIds.delete(id); chk.checked = false; }
+    else { STATE.batchIds.add(id); chk.checked = true; }
+    updateBatchUI();
+}
+
+function updateBatchUI() {
+    const panel = EL('batchPanel');
+    EL('batchCount').textContent = `${STATE.batchIds.size} Selected`;
+    if(STATE.batchIds.size > 0) panel.classList.remove('hidden'); else panel.classList.add('hidden');
+}
+
+EL('clearBatch').onclick = () => {
+    STATE.batchIds.clear();
+    document.querySelectorAll('.big-check').forEach(c => c.checked = false);
+    updateBatchUI();
+}
+
+EL('createBatchPl').onclick = async () => {
+    if(!STATE.token) return alert("Please Sign In first.");
+    const title = EL('newPlName').value.trim() || `FilterTube Batch ${new Date().toLocaleTimeString()}`;
+    const ids = Array.from(STATE.batchIds);
+    if(ids.length === 0) return;
+    
+    EL('createBatchPl').textContent = "Creating...";
+    try {
+        const res1 = await fetch(`https://www.googleapis.com/youtube/v3/playlists?part=snippet,status`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${STATE.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ snippet: { title }, status: { privacyStatus: 'private' } })
+        });
+        const plData = await res1.json();
+        if(plData.error) throw new Error(plData.error.message);
+
+        for(const vid of ids) {
+            await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${STATE.token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ snippet: { playlistId: plData.id, resourceId: { kind: 'youtube#video', videoId: vid } } })
+            });
+        }
+        alert("Playlist Created!");
+        EL('clearBatch').click();
+    } catch(e) { alert("Error: " + e.message); } 
+    finally { EL('createBatchPl').textContent = "Create Playlist"; }
+}
+
+// Queue
+let queue = [];
+window.addToQueue = (id, title) => { queue.push({id, title}); renderQueue(); }
+function renderQueue() {
+    const el = EL('queueList'); el.innerHTML = '';
+    queue.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.style.cssText = "padding:8px; background:rgba(0,0,0,0.2); border-radius:6px; display:flex; justify-content:space-between; font-size:0.85rem";
+        div.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px">${item.title}</span> <span style="cursor:pointer;color:#ff6b6b" onclick="remQ(${i})">×</span>`;
+        el.appendChild(div);
+    });
+    EL('queueStats').textContent = `${queue.length} videos`;
+}
+window.remQ = (i) => { queue.splice(i,1); renderQueue(); }
+EL('clearQueue').onclick = () => { queue = []; renderQueue(); }
+EL('playQueue').onclick = () => { if(queue.length) window.open(`http://www.youtube.com/watch_videos?video_ids=${queue.map(i=>i.id).join(',')}`); }
+
+/* =========================================
+   SAVED PAGES & AUTH
+   ========================================= */
+EL('savePageBtn').onclick = () => {
+    if(!STATE.currentResults.length) return;
+    const name = prompt("Name this page (e.g., 'Joji Reactions'):");
+    if(!name) return;
+    const saved = JSON.parse(localStorage.getItem('ft_saved_pages') || '[]');
+    saved.unshift({ name, items: STATE.currentResults, date: new Date().toLocaleDateString() });
+    localStorage.setItem('ft_saved_pages', JSON.stringify(saved));
+    renderSavedList();
+}
+
+function renderSavedList() {
+    const list = EL('savedList'); list.innerHTML = '';
+    const saved = JSON.parse(localStorage.getItem('ft_saved_pages') || '[]');
+    if(!saved.length) list.innerHTML = '<div style="color:var(--muted); font-size:0.8rem">No saved pages</div>';
+    saved.forEach((page, idx) => {
+        const div = document.createElement('div'); div.className = 'saved-item';
+        div.innerHTML = `<span>${page.name}</span> <div><button class="btn small" onclick="loadPage(${idx})">Load</button> <button class="btn small danger" onclick="delPage(${idx})">×</button></div>`;
+        list.appendChild(div);
+    });
+}
+window.loadPage = (idx) => {
+    const saved = JSON.parse(localStorage.getItem('ft_saved_pages'));
+    STATE.currentResults = saved[idx].items;
+    renderResults(STATE.currentResults);
+    EL('status').textContent = `Loaded "${saved[idx].name}"`;
+    EL('savePageBtn').classList.add('hidden');
+}
+window.delPage = (idx) => {
+    const saved = JSON.parse(localStorage.getItem('ft_saved_pages'));
+    saved.splice(idx, 1);
+    localStorage.setItem('ft_saved_pages', JSON.stringify(saved));
+    renderSavedList();
+}
+renderSavedList();
+
+EL('authBtn').onclick = () => {
+    const cid = EL('clientId').value.trim();
+    if(!cid) return alert("Client ID required");
+    localStorage.setItem('ft_client_id', cid);
+    const red = window.location.href.split('#')[0];
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cid}&redirect_uri=${red}&response_type=token&scope=https://www.googleapis.com/auth/youtube`;
+    window.open(url, "ft_auth", "width=500,height=600");
+    window.onhashchange = () => {
+        if(window.location.hash.includes('access_token')) {
+            STATE.token = new URLSearchParams(window.location.hash.substring(1)).get('access_token');
+            EL('authBtn').textContent = "✓ Signed In"; EL('authBtn').classList.add('primary');
+        }
+    };
+};
+
+window.playVideo = (id, title) => {
+    EL('playerTitle').textContent = title;
+    EL('iframePlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+    EL('playerLink').href = `https://youtu.be/${id}`;
+    EL('playerModal').style.display = 'flex';
+}
+window.closePlayer = () => { EL('playerModal').style.display = 'none'; EL('iframePlayer').src = ''; }
+
+/* EXPORT */
+EL('exportData').onclick = () => {
+    const d = { key: EL('apiKey').value, cid: EL('clientId').value, saved: localStorage.getItem('ft_saved_pages') };
+    const b = new Blob([JSON.stringify(d)], {type:"application/json"});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download='ft_backup.json'; a.click();
+}
+EL('importData').onclick = () => EL('importInput').click();
+EL('importInput').onchange = (e) => {
+    const r = new FileReader();
+    r.onload = (ev) => {
+        const d = JSON.parse(ev.target.result);
+        if(d.key) EL('apiKey').value = d.key;
+        if(d.saved) localStorage.setItem('ft_saved_pages', d.saved);
+        location.reload();
+    };
+    r.readAsText(e.target.files[0]);
+}
+EL('viewToggle').onclick = () => EL('results').classList.toggle('list-view');
+EL('helpBtn').onclick = () => EL('helpModal').style.display = 'flex';
+EL('copyLinksBtn').onclick = () => {
+    const links = STATE.currentResults.map(i => `https://youtu.be/${i.id}`).join('\n');
+    navigator.clipboard.writeText(links).then(() => alert("Copied links!"));
+}
+</script>
+</body>
+</html>
