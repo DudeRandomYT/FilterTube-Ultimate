@@ -4,13 +4,16 @@
 
 ## 🚀 [Live Demo](https://yumadesuyo.github.io/FilterTube-Ultimate/)
 
+<img width="1885" height="961" alt="image" src="https://github.com/user-attachments/assets/c5053431-3740-4ba9-abe1-b7dfbdd7ced3" />
+
+
 FilterTube is a lightweight, privacy-focused power tool for YouTube. It bypasses the "Recommended" clutter and uses strict Boolean logic to find exactly what you need.
 
 ### ✨ Features
 - **Strict AND/OR Logic:** No more ignored keywords.
 - **Batch Playlists:** Select multiple videos and save them to your YouTube account instantly.
 - **Offline Saving:** Save search result pages to view later without using API quota.
-- **Custom UI:** Dark/Bright modes and a custom colour wheel.
+- **Custom UI:** Dark/Bright modes and a custom colour wheel. Add your own background by uploading a link or a file!
 
 ### 🛠️ Setup
 1. Get a free API Key from [Google Cloud Console](https://console.cloud.google.com/).
